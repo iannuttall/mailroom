@@ -52,6 +52,18 @@ test('the CLI bundle is executable and reports its version', async () => {
   assert.equal(result.stdout.trim(), packageJson.version)
 })
 
+test('the CLI emits parseable JSON without trailing help', async () => {
+  const result = await execFileAsync(process.execPath, [
+    'dist/cli.js',
+    'operations',
+    'describe',
+    'messages.get',
+    '--json',
+  ])
+  const output = JSON.parse(result.stdout)
+  assert.equal(output.operation.id, 'messages.get')
+})
+
 test('agent skill, prompts, config, and policies ship', async () => {
   const required = [
     'skills/mailroom/SKILL.md',

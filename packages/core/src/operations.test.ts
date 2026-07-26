@@ -24,8 +24,23 @@ test('describe exposes one JSON schema', () => {
   assert.equal(description.inputSchema.type, 'object')
 })
 
+test('every operation exposes a JSON schema', () => {
+  for (const operation of listOperations()) {
+    const description = describeOperation(operation.id)
+    assert.equal(description.id, operation.id)
+    assert.equal(description.inputSchema.type, 'object')
+  }
+})
+
 test('operation input applies defaults and rejects invalid values', () => {
   assert.deepEqual(parseOperationInput('messages.list', {}), { limit: 25 })
+  assert.deepEqual(
+    parseOperationInput('domains.upsert', { domain: 'EXAMPLE.COM' }),
+    {
+      domain: 'example.com',
+      enabled: true,
+    },
+  )
   assert.throws(
     () => parseOperationInput('messages.get', { id: '' }),
     /Invalid operation parameters/,

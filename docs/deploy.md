@@ -15,6 +15,7 @@ Create the storage resources:
 pnpm --filter @mailroom/worker exec wrangler d1 create mailroom
 pnpm --filter @mailroom/worker exec wrangler r2 bucket create mailroom-raw
 pnpm --filter @mailroom/worker exec wrangler ai-search create mailroom \
+  --type builtin \
   --hybrid-search \
   --custom-metadata-schema ../../config/ai-search-metadata.json
 ```
@@ -46,7 +47,7 @@ Regenerate types, apply the migration, and deploy:
 ```sh
 pnpm --filter @mailroom/worker generate-types
 pnpm --filter @mailroom/worker exec wrangler d1 migrations apply mailroom --remote
-pnpm --filter @mailroom/worker deploy
+pnpm --filter @mailroom/worker run deploy
 ```
 
 Add a custom Worker route such as `mailroom.your-domain.example` or use the
@@ -87,7 +88,7 @@ Store the same relay secret used as `INGRESS_SECRET` on the central Worker:
 ```sh
 pnpm --filter @mailroom/ingress exec wrangler secret put INGRESS_SECRET
 pnpm --filter @mailroom/ingress generate-types
-pnpm --filter @mailroom/ingress deploy
+pnpm --filter @mailroom/ingress run deploy
 ```
 
 Route inbound domain addresses to this Worker in that account. In Mailroom,

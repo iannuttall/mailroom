@@ -1,14 +1,6 @@
 [
   {
-    "field_name": "messageId",
-    "data_type": "text"
-  },
-  {
-    "field_name": "threadId",
-    "data_type": "text"
-  },
-  {
-    "field_name": "inboxId",
+    "field_name": "inbox_id",
     "data_type": "text"
   },
   {
@@ -24,7 +16,7 @@
     "data_type": "text"
   },
   {
-    "field_name": "receivedAt",
+    "field_name": "received_at",
     "data_type": "datetime"
   }
 ]

@@ -10,3 +10,4 @@ coverage
 .DS_Store
 docs/plans
 docs/known-issues.md
+/apps/worker/wrangler.ian.jsonc

@@ -56,9 +56,6 @@ const main = defineCommand({
     run: runOperationCommand,
     mcp: mcpCommand,
   },
-  run: () => {
-    process.stdout.write(help)
-  },
 })
 
 const argv = process.argv.slice(2)

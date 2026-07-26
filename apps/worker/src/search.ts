@@ -26,11 +26,11 @@ export async function indexMessage(
       metadata: {
         messageId: message.id,
         threadId: message.threadId,
-        inboxId: message.inboxId,
+        inbox_id: message.inboxId,
         direction: message.direction,
         status: message.status,
         classification: message.classification ?? '',
-        receivedAt: message.receivedAt,
+        received_at: message.receivedAt,
       },
     })
     await env.DB.prepare(
@@ -70,7 +70,7 @@ export async function hybridSearch(
   }>
 > {
   const filters: Record<string, string> = {}
-  if (input.inboxId) filters.inboxId = input.inboxId
+  if (input.inboxId) filters.inbox_id = input.inboxId
   if (input.direction) filters.direction = input.direction
   if (input.status) filters.status = input.status
   if (input.classification) filters.classification = input.classification

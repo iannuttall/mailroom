@@ -6,7 +6,7 @@ export const emailAddressSchema = z
   .trim()
   .email()
   .max(320)
-  .transform((value) => value.toLowerCase())
+  .overwrite((value) => value.toLowerCase())
 export const domainNameSchema = z
   .string()
   .trim()
@@ -15,14 +15,14 @@ export const domainNameSchema = z
   .regex(
     /^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/,
   )
-  .transform((value) => value.toLowerCase())
+  .overwrite((value) => value.toLowerCase())
 export const localPartSchema = z
   .string()
   .trim()
   .min(1)
   .max(64)
   .regex(/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/)
-  .transform((value) => value.toLowerCase())
+  .overwrite((value) => value.toLowerCase())
 
 export const messageStatusSchema = z.enum([
   'unread',
