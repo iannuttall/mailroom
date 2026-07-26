@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mailroom-ingress",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
+  "vars": {
+    "CENTRAL_MAILROOM_URL": "https://mailroom.example.com",
+    "ALLOWED_FROM_DOMAINS": "example.com",
+    "MAX_EMAIL_BYTES": "26214400"
+  },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["mailroom@example.com"],
+      "remote": true
+    }
+  ]
+}

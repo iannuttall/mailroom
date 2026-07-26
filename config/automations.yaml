@@ -1,0 +1,9 @@
+automations:
+  - id: sponsorship
+    enabled: false
+    prompt: classify/sponsorship
+    classification: sponsorship
+    minConfidence: 0.92
+    action: draft
+    approval: telegram
+    offerIds: []

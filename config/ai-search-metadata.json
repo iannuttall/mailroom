@@ -1,0 +1,30 @@
+[
+  {
+    "field_name": "messageId",
+    "data_type": "text"
+  },
+  {
+    "field_name": "threadId",
+    "data_type": "text"
+  },
+  {
+    "field_name": "inboxId",
+    "data_type": "text"
+  },
+  {
+    "field_name": "direction",
+    "data_type": "text"
+  },
+  {
+    "field_name": "status",
+    "data_type": "text"
+  },
+  {
+    "field_name": "classification",
+    "data_type": "text"
+  },
+  {
+    "field_name": "receivedAt",
+    "data_type": "datetime"
+  }
+]

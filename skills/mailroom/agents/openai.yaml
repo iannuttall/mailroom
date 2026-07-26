@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mailroom"
+  short_description: "Read, search, draft, and send project email"
+  default_prompt: "Use $mailroom to check recent project email and tell me what needs a reply."

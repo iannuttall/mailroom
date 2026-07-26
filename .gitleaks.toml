@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated and dependency directories"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.turbo/''',
+  '''(^|/)\.wrangler/''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)worker-configuration\.d\.ts$'''
+]

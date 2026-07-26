@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: Run npm publish without publishing
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Use npm with trusted publishing support
+        run: npm install --global npm@11.10.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm test:package-install:built
+      - run: pnpm lint
+      - run: pnpm security:check
+      - name: Publish dry run
+        if: inputs.dryRun == 'true'
+        run: npm publish --dry-run
+      - name: Publish
+        if: inputs.dryRun == 'false'
+        run: npm publish --access public --provenance
+      - name: Tag published version
+        if: inputs.dryRun == 'false'
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          version="$(node --print "require('./package.json').version")"
+          tag="v${version}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "$tag" --message "Release @iannuttall/mailroom@$version"
+          git push origin "$tag"

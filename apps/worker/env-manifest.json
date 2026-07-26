@@ -1,0 +1,22 @@
+{
+  "bindings": {
+    "DB": "D1 database",
+    "RAW": "R2 bucket",
+    "AI": "Workers AI",
+    "AI_SEARCH": "AI Search instance",
+    "EMAIL": "Email Service send binding"
+  },
+  "requiredSecrets": [
+    "MAILROOM_API_TOKEN",
+    "INGRESS_SECRET"
+  ],
+  "optionalSecrets": [
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_CHAT_ID"
+  ],
+  "variables": {
+    "ENVIRONMENT": "production",
+    "AI_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast",
+    "MAX_EMAIL_BYTES": "26214400"
+  }
+}

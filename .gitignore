@@ -1,0 +1,12 @@
+node_modules
+dist
+.turbo
+.wrangler
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.tgz
+coverage
+.DS_Store
+docs/plans
+docs/known-issues.md

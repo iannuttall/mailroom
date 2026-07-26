@@ -1,0 +1,33 @@
+{
+  "name": "@mailroom/cli",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mailroom": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown --config tsdown.config.ts",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { force: true, recursive: true })\"",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "@mailroom/core": "workspace:*",
+    "@mailroom/mcp": "workspace:*",
+    "@napi-rs/keyring": "^1.3.0",
+    "citty": "^0.2.2"
+  },
+  "devDependencies": {
+    "tsdown": "^0.22.14",
+    "vitest": "^4.1.0"
+  }
+}

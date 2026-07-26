@@ -1,0 +1,318 @@
+import {
+  headersToRecord,
+  messageIdReferences,
+  normalizeMessageId,
+  normalizeSubject,
+  plainTextPreview,
+} from '@mailroom/core'
+import PostalMime, {
+  type Attachment,
+  type Email as ParsedEmail,
+} from 'postal-mime'
+import { batchOrThrow, newId, nowIso } from './database.js'
+import { emailAddresses, firstEmailAddress } from './email-addresses.js'
+import { requireInboundRoute } from './route-store.js'
+import { indexMessage } from './search.js'
+import { notifyTelegram } from './telegram.js'
+import type { WaitUntilContext } from './types.js'
+
+const MAX_TEXT_BODY = 750_000
+const MAX_HTML_BODY = 1_500_000
+
+type InboundEnvelope = {
+  from: string
+  to: string
+  raw: ReadableStream<Uint8Array>
+  rawSize: number
+  headers: Headers
+  source: 'email-routing' | 'relay'
+}
+
+type StoredAttachment = {
+  id: string
+  filename: string | null
+  contentType: string
+  contentId: string | null
+  disposition: string | null
+  sizeBytes: number
+  key: string
+}
+
+function attachmentBytes(attachment: Attachment): Uint8Array {
+  if (typeof attachment.content === 'string') {
+    return new TextEncoder().encode(attachment.content)
+  }
+  if (attachment.content instanceof ArrayBuffer) {
+    return new Uint8Array(attachment.content)
+  }
+  return attachment.content
+}
+
+function receivedAt(parsed: ParsedEmail): string {
+  const candidate = parsed.date ? new Date(parsed.date) : new Date()
+  return Number.isNaN(candidate.valueOf())
+    ? new Date().toISOString()
+    : candidate.toISOString()
+}
+
+function parsedHeaders(parsed: ParsedEmail): Record<string, string[]> {
+  const headers = new Headers()
+  for (const header of parsed.headers) headers.append(header.key, header.value)
+  return headersToRecord(headers)
+}
+
+async function findThreadId(
+  db: D1Database,
+  inboxId: string,
+  parsed: ParsedEmail,
+): Promise<string | null> {
+  const references = messageIdReferences(parsed.inReplyTo, parsed.references)
+  if (references.length) {
+    const placeholders = references.map(() => '?').join(', ')
+    const matched = await db
+      .prepare(
+        `SELECT thread_id FROM messages
+        WHERE inbox_id = ? AND rfc_message_id IN (${placeholders})
+        ORDER BY received_at DESC LIMIT 1`,
+      )
+      .bind(inboxId, ...references)
+      .first<{ thread_id: string }>()
+    if (matched) return matched.thread_id
+  }
+
+  const normalized = normalizeSubject(parsed.subject)
+  if (!normalized) return null
+  const fallback = await db
+    .prepare(
+      `SELECT id FROM threads
+      WHERE inbox_id = ? AND normalized_subject = ?
+        AND datetime(latest_at) >= datetime('now', '-90 days')
+      ORDER BY latest_at DESC LIMIT 1`,
+    )
+    .bind(inboxId, normalized)
+    .first<{ id: string }>()
+  return fallback?.id ?? null
+}
+
+async function storeAttachments(
+  env: Env,
+  messageId: string,
+  attachments: Attachment[],
+): Promise<StoredAttachment[]> {
+  return Promise.all(
+    attachments.map(async (attachment, index) => {
+      const id = newId('att')
+      const bytes = attachmentBytes(attachment)
+      const key = `attachments/${messageId}/${String(index + 1).padStart(3, '0')}-${id}`
+      await env.RAW.put(key, bytes, {
+        httpMetadata: { contentType: attachment.mimeType },
+        customMetadata: {
+          messageId,
+          filename: attachment.filename ?? '',
+        },
+      })
+      return {
+        id,
+        filename: attachment.filename,
+        contentType: attachment.mimeType,
+        contentId: attachment.contentId ?? null,
+        disposition: attachment.disposition,
+        sizeBytes: bytes.byteLength,
+        key,
+      }
+    }),
+  )
+}
+
+export async function ingestEmail(
+  env: Env,
+  executionCtx: WaitUntilContext,
+  envelope: InboundEnvelope,
+): Promise<{ messageId: string; duplicate: boolean }> {
+  const maxBytes = Number(env.MAX_EMAIL_BYTES)
+  if (
+    !Number.isFinite(envelope.rawSize) ||
+    envelope.rawSize <= 0 ||
+    envelope.rawSize > maxBytes
+  ) {
+    throw new Error(
+      `Email size ${envelope.rawSize} is outside the allowed range.`,
+    )
+  }
+
+  const route = await requireInboundRoute(env.DB, envelope.to)
+  const [storageStream, parseStream] = envelope.raw.tee()
+  const messageId = newId('msg')
+  const rawKey = `raw/${route.domain}/${messageId}.eml`
+
+  let parsed: ParsedEmail
+  try {
+    ;[parsed] = await Promise.all([
+      PostalMime.parse(parseStream, {
+        attachmentEncoding: 'arraybuffer',
+        maxNestingDepth: 20,
+        maxHeadersSize: 512 * 1024,
+      }),
+      env.RAW.put(rawKey, storageStream, {
+        httpMetadata: { contentType: 'message/rfc822' },
+        customMetadata: {
+          recipient: envelope.to,
+          source: envelope.source,
+        },
+      }),
+    ])
+  } catch (error) {
+    await env.RAW.delete(rawKey)
+    throw error
+  }
+
+  const rfcMessageId = normalizeMessageId(parsed.messageId)
+  if (rfcMessageId) {
+    const duplicate = await env.DB.prepare(
+      'SELECT id FROM messages WHERE inbox_id = ? AND rfc_message_id = ?',
+    )
+      .bind(route.inboxId, rfcMessageId)
+      .first<{ id: string }>()
+    if (duplicate) {
+      await env.RAW.delete(rawKey)
+      return { messageId: duplicate.id, duplicate: true }
+    }
+  }
+
+  const existingThreadId = await findThreadId(env.DB, route.inboxId, parsed)
+  const threadId = existingThreadId ?? newId('thr')
+  const createdAt = nowIso()
+  const at = receivedAt(parsed)
+  const sender = firstEmailAddress(parsed.from) || envelope.from.toLowerCase()
+  const recipients = emailAddresses(parsed.to)
+  if (!recipients.includes(envelope.to.toLowerCase())) {
+    recipients.push(envelope.to.toLowerCase())
+  }
+  const cc = emailAddresses(parsed.cc)
+  const subject = (parsed.subject ?? '').slice(0, 998)
+  const normalizedSubject = normalizeSubject(subject)
+  const text = (parsed.text ?? '').slice(0, MAX_TEXT_BODY)
+  const html = (parsed.html ?? '').slice(0, MAX_HTML_BODY)
+  const preview = plainTextPreview(text || subject)
+  const attachments = await storeAttachments(env, messageId, parsed.attachments)
+
+  const statements: D1PreparedStatement[] = []
+  if (!existingThreadId) {
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO threads
+          (id, inbox_id, normalized_subject, latest_at, message_count, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 1, ?, ?)`,
+      ).bind(
+        threadId,
+        route.inboxId,
+        normalizedSubject,
+        at,
+        createdAt,
+        createdAt,
+      ),
+    )
+  } else {
+    statements.push(
+      env.DB.prepare(
+        `UPDATE threads SET latest_at = ?, message_count = message_count + 1,
+          updated_at = ? WHERE id = ?`,
+      ).bind(at, createdAt, threadId),
+    )
+  }
+  statements.push(
+    env.DB.prepare(
+      `INSERT INTO messages (
+        id, thread_id, inbox_id, direction, status, rfc_message_id,
+        in_reply_to, message_references, sender, recipients, cc, subject,
+        normalized_subject, preview, text_body, html_body, headers, raw_key,
+        size_bytes, attachment_count, received_at, created_at
+      ) VALUES (
+        ?, ?, ?, 'inbound', 'unread', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?
+      )`,
+    ).bind(
+      messageId,
+      threadId,
+      route.inboxId,
+      rfcMessageId,
+      normalizeMessageId(parsed.inReplyTo),
+      JSON.stringify(messageIdReferences(parsed.inReplyTo, parsed.references)),
+      sender,
+      JSON.stringify(recipients),
+      JSON.stringify(cc),
+      subject,
+      normalizedSubject,
+      preview,
+      text,
+      html || null,
+      JSON.stringify(parsedHeaders(parsed)),
+      rawKey,
+      envelope.rawSize,
+      attachments.length,
+      at,
+      createdAt,
+    ),
+    env.DB.prepare(
+      `INSERT INTO message_fts
+        (message_id, inbox_id, subject, sender, body, classification)
+      VALUES (?, ?, ?, ?, ?, '')`,
+    ).bind(messageId, route.inboxId, subject, sender, text),
+    ...attachments.map((attachment) =>
+      env.DB.prepare(
+        `INSERT INTO attachments
+          (id, message_id, filename, content_type, content_id, disposition,
+            size_bytes, r2_key, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        attachment.id,
+        messageId,
+        attachment.filename,
+        attachment.contentType,
+        attachment.contentId,
+        attachment.disposition,
+        attachment.sizeBytes,
+        attachment.key,
+        createdAt,
+      ),
+    ),
+  )
+
+  try {
+    await batchOrThrow(env.DB, statements)
+  } catch (error) {
+    await Promise.all([
+      env.RAW.delete(rawKey),
+      ...attachments.map((attachment) => env.RAW.delete(attachment.key)),
+    ])
+    throw error
+  }
+
+  executionCtx.waitUntil(
+    Promise.all([
+      indexMessage(env, {
+        id: messageId,
+        threadId,
+        inboxId: route.inboxId,
+        mailbox: envelope.to.toLowerCase(),
+        direction: 'inbound',
+        from: sender,
+        to: recipients,
+        cc,
+        subject,
+        text,
+        receivedAt: at,
+        status: 'unread',
+      }),
+      notifyTelegram(env, {
+        id: messageId,
+        from: sender,
+        to: envelope.to,
+        subject,
+        preview,
+      }),
+    ]).then(() => undefined),
+  )
+
+  return { messageId, duplicate: false }
+}

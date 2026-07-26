@@ -1,0 +1,26 @@
+name: Proposal
+description: Propose a focused Mailroom change
+title: "proposal: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: job
+    attributes:
+      label: Job
+      description: What should a person or agent be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current limitation
+      description: Why do the existing operations not cover it?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and privacy
+      description: What email, credential, approval, or delivery boundary changes?
+    validations:
+      required: true

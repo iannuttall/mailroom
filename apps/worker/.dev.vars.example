@@ -1,0 +1,4 @@
+MAILROOM_API_TOKEN=replace-with-a-long-random-token
+INGRESS_SECRET=replace-with-a-different-long-random-secret
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=

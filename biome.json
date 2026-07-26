@@ -1,0 +1,47 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!!**/node_modules",
+      "!!**/dist",
+      "!!**/.turbo",
+      "!!**/.wrangler",
+      "!!**/pnpm-lock.yaml",
+      "!!**/*.md",
+      "!!**/*.json",
+      "!!**/*.jsonc",
+      "!!**/*.yaml",
+      "!!**/*.yml",
+      "!!**/*.config.ts",
+      "!!**/*.config.mts",
+      "!!**/worker-configuration.d.ts"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": {
+            "maxLines": 800,
+            "skipBlankLines": true
+          }
+        }
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "asNeeded"
+    }
+  }
+}

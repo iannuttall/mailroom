@@ -1,0 +1,13 @@
+{
+  "bindings": {
+    "EMAIL": "Email Service send binding"
+  },
+  "requiredSecrets": [
+    "INGRESS_SECRET"
+  ],
+  "variables": {
+    "CENTRAL_MAILROOM_URL": "Public HTTPS URL of the central Worker",
+    "ALLOWED_FROM_DOMAINS": "Comma-separated domains this relay may send from",
+    "MAX_EMAIL_BYTES": "26214400"
+  }
+}
