@@ -5,20 +5,35 @@ Mailroom has one authoritative mailbox and several thin interfaces.
 ## Central Worker
 
 `apps/worker` receives email directly from Cloudflare Email Routing or through
-a signed relay. It resolves an explicit route before consuming the body.
+a signed relay.
 
-For accepted mail it:
+Direct Email Routing delivery uses this order:
 
-1. stores the original MIME in R2;
-2. parses bounded text, HTML, headers, and attachment metadata;
-3. stores attachments in R2;
-4. groups the message into a thread in D1;
-5. writes a D1 FTS record;
-6. indexes canonical Markdown in AI Search in `waitUntil()`;
-7. sends an optional Telegram notification.
+1. store the original MIME under `raw/inbound/` in R2;
+2. write a small job under `pending/inbound/` in R2;
+3. forward the original to the optional verified Gmail destination;
+4. add the pending job to the `mailroom-ingest` Queue;
+5. acknowledge Cloudflare Email Routing.
+
+The Queue consumer parses the archived MIME, resolves the Mailroom route,
+stores attachments, groups the message into a thread, and writes D1 and FTS
+records. It deletes the pending job only after the D1 write succeeds.
+
+A scheduled Worker trigger scans `pending/inbound/` every five minutes and
+re-enqueues any jobs still present. Queue delivery is idempotent. A unique
+inbox and provider-message key prevents concurrent retries from creating a
+second message.
+
+AI Search indexing and Telegram notifications run after the D1 write. Their
+failure does not remove the raw MIME or parsed message.
 
 D1 is authoritative for state. R2 is authoritative for original bytes. AI
 Search is a rebuildable retrieval index.
+
+Gmail forwarding does not wait for parsing, route resolution, D1, AI Search, or
+notifications. A forwarding failure leaves the R2 pending job available for
+Mailroom. A raw R2 archive failure still attempts Gmail forwarding, then
+returns a temporary error so the sender retries delivery.
 
 ## Cross-account relay
 
@@ -37,6 +52,21 @@ before using its local Email Service binding.
 The relay stores no messages, drafts, prompts, or credentials beyond its shared
 Wrangler secret.
 
+## Gmail bridge
+
+Gmail can act as a human interface without becoming Mailroom's source of truth.
+Inbound messages are forwarded to one verified destination address after
+storage.
+
+A standalone Apps Script runs in the Gmail account and reads only the Sent
+messages needed for synchronization. It pushes raw MIME to a signed import
+endpoint using a separate secret. The Worker checks the signature, configured
+mailbox route, exact From address, raw body hash, provider message id, and
+idempotency key before storing the message with `direction = outbound`.
+
+The Worker never stores a Google OAuth refresh token. The Apps Script owns
+Google authorization and sends only configured From addresses to Mailroom.
+
 ## Operation contract
 
 `packages/core/src/operations.ts` registers every operation once. Each record
@@ -48,7 +78,7 @@ contains:
 - safety flags;
 - a bounded Zod input schema.
 
-The CLI, private API, MCP server, and future Agent use that contract. The Worker
+The CLI, private API, MCP server, and Agent wrappers use that contract. The Worker
 maps operation ids to modular handlers and has a test that fails when a
 registered operation lacks an implementation.
 

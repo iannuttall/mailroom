@@ -1,5 +1,6 @@
 import {
   headersToRecord,
+  MailroomError,
   messageIdReferences,
   normalizeMessageId,
   normalizeSubject,
@@ -19,13 +20,18 @@ import type { WaitUntilContext } from './types.js'
 const MAX_TEXT_BODY = 750_000
 const MAX_HTML_BODY = 1_500_000
 
-type InboundEnvelope = {
+export type StoredEmailEnvelope = {
   from: string
   to: string
+  mailbox: string
+  direction: 'inbound' | 'outbound'
   raw: ReadableStream<Uint8Array>
   rawSize: number
   headers: Headers
-  source: 'email-routing' | 'relay'
+  source: 'email-routing' | 'relay' | 'gmail-sent'
+  providerMessageId?: string
+  expectedSender?: string
+  archivedRawKey?: string
 }
 
 type StoredAttachment = {
@@ -127,7 +133,7 @@ async function storeAttachments(
 export async function ingestEmail(
   env: Env,
   executionCtx: WaitUntilContext,
-  envelope: InboundEnvelope,
+  envelope: StoredEmailEnvelope,
 ): Promise<{ messageId: string; duplicate: boolean }> {
   const maxBytes = Number(env.MAX_EMAIL_BYTES)
   if (
@@ -140,33 +146,52 @@ export async function ingestEmail(
     )
   }
 
-  const route = await requireInboundRoute(env.DB, envelope.to)
-  const [storageStream, parseStream] = envelope.raw.tee()
+  const route = await requireInboundRoute(env.DB, envelope.mailbox)
   const messageId = newId('msg')
-  const rawKey = `raw/${route.domain}/${messageId}.eml`
+  const rawKey =
+    envelope.archivedRawKey ?? `raw/${route.domain}/${messageId}.eml`
 
   let parsed: ParsedEmail
-  try {
+  if (envelope.archivedRawKey) {
+    parsed = await PostalMime.parse(envelope.raw, {
+      attachmentEncoding: 'arraybuffer',
+      maxNestingDepth: 20,
+      maxHeadersSize: 512 * 1024,
+    })
+  } else {
+    const [storageStream, parseStream] = envelope.raw.tee()
+    const fixed = new FixedLengthStream(envelope.rawSize)
+    const pipe = storageStream.pipeTo(fixed.writable)
     ;[parsed] = await Promise.all([
       PostalMime.parse(parseStream, {
         attachmentEncoding: 'arraybuffer',
         maxNestingDepth: 20,
         maxHeadersSize: 512 * 1024,
       }),
-      env.RAW.put(rawKey, storageStream, {
+      env.RAW.put(rawKey, fixed.readable, {
         httpMetadata: { contentType: 'message/rfc822' },
         customMetadata: {
-          recipient: envelope.to,
+          mailbox: envelope.mailbox,
+          direction: envelope.direction,
           source: envelope.source,
         },
       }),
+      pipe,
     ])
-  } catch (error) {
-    await env.RAW.delete(rawKey)
-    throw error
   }
 
   const rfcMessageId = normalizeMessageId(parsed.messageId)
+  if (envelope.providerMessageId) {
+    const duplicate = await env.DB.prepare(
+      `SELECT id FROM messages
+      WHERE inbox_id = ? AND provider_message_id = ?`,
+    )
+      .bind(route.inboxId, envelope.providerMessageId)
+      .first<{ id: string }>()
+    if (duplicate) {
+      return { messageId: duplicate.id, duplicate: true }
+    }
+  }
   if (rfcMessageId) {
     const duplicate = await env.DB.prepare(
       'SELECT id FROM messages WHERE inbox_id = ? AND rfc_message_id = ?',
@@ -174,7 +199,6 @@ export async function ingestEmail(
       .bind(route.inboxId, rfcMessageId)
       .first<{ id: string }>()
     if (duplicate) {
-      await env.RAW.delete(rawKey)
       return { messageId: duplicate.id, duplicate: true }
     }
   }
@@ -184,8 +208,20 @@ export async function ingestEmail(
   const createdAt = nowIso()
   const at = receivedAt(parsed)
   const sender = firstEmailAddress(parsed.from) || envelope.from.toLowerCase()
+  if (
+    envelope.expectedSender &&
+    sender !== envelope.expectedSender.toLowerCase()
+  ) {
+    throw new MailroomError(
+      'INVALID_INPUT',
+      `The imported sender ${sender || '(missing)'} does not match ${envelope.expectedSender}.`,
+    )
+  }
   const recipients = emailAddresses(parsed.to)
-  if (!recipients.includes(envelope.to.toLowerCase())) {
+  if (
+    envelope.direction === 'inbound' &&
+    !recipients.includes(envelope.to.toLowerCase())
+  ) {
     recipients.push(envelope.to.toLowerCase())
   }
   const cc = emailAddresses(parsed.cc)
@@ -195,6 +231,7 @@ export async function ingestEmail(
   const html = (parsed.html ?? '').slice(0, MAX_HTML_BODY)
   const preview = plainTextPreview(text || subject)
   const attachments = await storeAttachments(env, messageId, parsed.attachments)
+  const status = envelope.direction === 'inbound' ? 'unread' : 'read'
 
   const statements: D1PreparedStatement[] = []
   if (!existingThreadId) {
@@ -226,15 +263,17 @@ export async function ingestEmail(
         id, thread_id, inbox_id, direction, status, rfc_message_id,
         in_reply_to, message_references, sender, recipients, cc, subject,
         normalized_subject, preview, text_body, html_body, headers, raw_key,
-        size_bytes, attachment_count, received_at, created_at
+        size_bytes, attachment_count, provider_message_id, received_at,
+        created_at
       ) VALUES (
-        ?, ?, ?, 'inbound', 'unread', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )`,
     ).bind(
       messageId,
       threadId,
       route.inboxId,
+      envelope.direction,
+      status,
       rfcMessageId,
       normalizeMessageId(parsed.inReplyTo),
       JSON.stringify(messageIdReferences(parsed.inReplyTo, parsed.references)),
@@ -250,6 +289,7 @@ export async function ingestEmail(
       rawKey,
       envelope.rawSize,
       attachments.length,
+      envelope.providerMessageId ?? null,
       at,
       createdAt,
     ),
@@ -281,10 +321,9 @@ export async function ingestEmail(
   try {
     await batchOrThrow(env.DB, statements)
   } catch (error) {
-    await Promise.all([
-      env.RAW.delete(rawKey),
-      ...attachments.map((attachment) => env.RAW.delete(attachment.key)),
-    ])
+    await Promise.all(
+      attachments.map((attachment) => env.RAW.delete(attachment.key)),
+    )
     throw error
   }
 
@@ -294,23 +333,27 @@ export async function ingestEmail(
         id: messageId,
         threadId,
         inboxId: route.inboxId,
-        mailbox: envelope.to.toLowerCase(),
-        direction: 'inbound',
+        mailbox: envelope.mailbox.toLowerCase(),
+        direction: envelope.direction,
         from: sender,
         to: recipients,
         cc,
         subject,
         text,
         receivedAt: at,
-        status: 'unread',
+        status,
       }),
-      notifyTelegram(env, {
-        id: messageId,
-        from: sender,
-        to: envelope.to,
-        subject,
-        preview,
-      }),
+      ...(envelope.direction === 'inbound'
+        ? [
+            notifyTelegram(env, {
+              id: messageId,
+              from: sender,
+              to: envelope.to,
+              subject,
+              preview,
+            }),
+          ]
+        : []),
     ]).then(() => undefined),
   )
 

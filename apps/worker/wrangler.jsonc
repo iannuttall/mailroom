@@ -37,6 +37,27 @@
       "remote": true
     }
   ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "INGEST_QUEUE",
+        "queue": "mailroom-ingest",
+        "remote": true
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "mailroom-ingest",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "retry_delay": 15
+      }
+    ]
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
   "ai": {
     "binding": "AI",
     "remote": true

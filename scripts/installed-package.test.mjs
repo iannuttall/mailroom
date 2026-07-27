@@ -51,6 +51,29 @@ try {
     { cwd: project },
   )
   assert.equal(loaded.stderr, '')
+  await readFile(
+    join(
+      project,
+      'node_modules',
+      '@iannuttall',
+      'mailroom',
+      'integrations',
+      'gmail-sent-sync',
+      'Code.js',
+    ),
+    'utf8',
+  )
+  await readFile(
+    join(
+      project,
+      'node_modules',
+      '@iannuttall',
+      'mailroom',
+      'docs',
+      'index.md',
+    ),
+    'utf8',
+  )
   process.stdout.write('Clean package install passed.\n')
 } finally {
   await rm(directory, { recursive: true, force: true })

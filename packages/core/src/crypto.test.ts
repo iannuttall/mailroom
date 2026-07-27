@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  importCanonicalRequest,
   relayCanonicalRequest,
   sha256Hex,
+  signImportRequest,
   signIngressRequest,
   signRelayRequest,
   verifyBearerToken,
+  verifyImportRequest,
   verifyIngressRequest,
   verifyRelayRequest,
 } from './crypto.js'
@@ -72,6 +75,38 @@ test('relay signatures bind the request body and route', async () => {
       { ...headers, path: '/v1/other' },
       signature,
       { now: 1700000000000 },
+    ),
+    false,
+  )
+})
+
+test('import signatures bind Gmail identity and mailbox metadata', async () => {
+  const now = 1_700_000_000_000
+  const headers = {
+    timestamp: String(now),
+    idempotencyKey: 'gmail-sent:user@gmail.com:18e829f',
+    source: 'gmail-sent',
+    account: 'user@gmail.com',
+    providerMessageId: '18e829f',
+    mailbox: 'me@example.com',
+    bodySha256: await sha256Hex('raw email'),
+  }
+  const signature = await signImportRequest('gmail-sync-secret', headers)
+
+  assert.equal(
+    importCanonicalRequest(headers).startsWith('mailroom-import-v1\n'),
+    true,
+  )
+  assert.equal(
+    await verifyImportRequest('gmail-sync-secret', headers, signature, { now }),
+    true,
+  )
+  assert.equal(
+    await verifyImportRequest(
+      'gmail-sync-secret',
+      { ...headers, mailbox: 'attacker@example.com' },
+      signature,
+      { now },
     ),
     false,
   )

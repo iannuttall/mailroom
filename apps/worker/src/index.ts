@@ -8,7 +8,12 @@ import {
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { requestContext, requireApiToken } from './auth.js'
-import { ingestEmail } from './ingest.js'
+import { receiveGmailSentEmail } from './gmail-sent-ingress.js'
+import { handleInboundEmail } from './inbound-handler.js'
+import {
+  consumeInboundQueue,
+  sweepPendingInbound,
+} from './inbound-processing.js'
 import { executeOperation } from './operation-executor.js'
 import { receiveRelayEmail } from './relay-ingress.js'
 import { failure, success } from './responses.js'
@@ -28,6 +33,19 @@ app.get('/health', (context) =>
 app.post('/v1/ingress', async (context) => {
   try {
     const result = await receiveRelayEmail(
+      context.req.raw,
+      context.env,
+      context.executionCtx,
+    )
+    return success(context, result, result.duplicate ? 200 : 201)
+  } catch (error) {
+    return failure(context, error)
+  }
+})
+
+app.post('/v1/ingress/gmail-sent', async (context) => {
+  try {
+    const result = await receiveGmailSentEmail(
       context.req.raw,
       context.env,
       context.executionCtx,
@@ -123,30 +141,22 @@ export default {
   async email(
     message: ForwardableEmailMessage,
     env: Env,
+    _executionCtx: ExecutionContext,
+  ): Promise<void> {
+    await handleInboundEmail(message, env)
+  },
+  async queue(
+    batch: MessageBatch<unknown>,
+    env: Env,
     executionCtx: ExecutionContext,
   ): Promise<void> {
-    try {
-      await ingestEmail(env, executionCtx, {
-        from: message.from,
-        to: message.to,
-        raw: message.raw,
-        rawSize: message.rawSize,
-        headers: message.headers,
-        source: 'email-routing',
-      })
-    } catch (error) {
-      if (
-        error instanceof MailroomError &&
-        ['NOT_FOUND', 'INVALID_INPUT'].includes(error.code)
-      ) {
-        message.setReject(error.message)
-        return
-      }
-      console.error('mailroom_email_ingest_failed', {
-        recipient: message.to,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      throw error
-    }
+    await consumeInboundQueue(batch, env, executionCtx)
+  },
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    executionCtx: ExecutionContext,
+  ): Promise<void> {
+    executionCtx.waitUntil(sweepPendingInbound(env))
   },
 } satisfies ExportedHandler<Env>

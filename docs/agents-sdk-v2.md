@@ -1,7 +1,7 @@
-# Agents SDK v2 seam
+# Add the Cloudflare Agents SDK
 
-The Cloudflare Agents SDK can add judgement and multiple turns later. It should
-orchestrate the existing operation registry, not become another mailbox.
+Use the Cloudflare Agents SDK for multi-turn email workflows. Call the existing
+operation registry instead of creating a second mailbox implementation.
 
 An Agent may:
 
@@ -17,10 +17,9 @@ An Agent may:
 The Agent must not own D1 tables, routing, prompt storage, offer validation,
 idempotency, or delivery. Those remain in core and the central Worker.
 
-A Cloudflare Workflow is the right later boundary for durable pauses, approval,
-timeouts, and retry policy. The Agent can retain conversation state and tool
-selection. The Workflow retains process state. Mailroom retains email state.
+Use a Cloudflare Workflow for durable pauses, approval, timeouts, and retry
+policy. The Agent retains conversation state and tool selection. The Workflow
+retains process state. Mailroom retains email state.
 
-This separation also keeps local use first-class. Claude, Codex, or another
-client can perform the same work through the CLI or three-tool MCP server
-without deploying an Agent.
+Claude, Codex, and other local clients can perform the same operations through
+the CLI or three-tool MCP server without a deployed Agent.

@@ -28,6 +28,7 @@ test('the public TypeScript and MCP entry points load', async () => {
   assert.equal(typeof core.MailroomClient, 'function')
   assert.equal(typeof core.listOperations, 'function')
   assert.equal(typeof core.signIngressRequest, 'function')
+  assert.equal(typeof core.signImportRequest, 'function')
   assert.equal(typeof core.signRelayRequest, 'function')
   assert.equal(typeof mcp.createMcpServer, 'function')
   assert.equal(typeof mcp.registerDiscoveryTools, 'function')
@@ -64,7 +65,7 @@ test('the CLI emits parseable JSON without trailing help', async () => {
   assert.equal(output.operation.id, 'messages.get')
 })
 
-test('agent skill, prompts, config, and policies ship', async () => {
+test('agent skill, prompts, integrations, config, and policies ship', async () => {
   const required = [
     'skills/mailroom/SKILL.md',
     'skills/mailroom/agents/openai.yaml',
@@ -72,6 +73,17 @@ test('agent skill, prompts, config, and policies ship', async () => {
     'prompts/classify/sponsorship.md',
     'config/automations.yaml',
     'config/offers.yaml',
+    'integrations/gmail-sent-sync/Code.js',
+    'integrations/gmail-sent-sync/appsscript.json',
+    'integrations/gmail-sent-sync/README.md',
+    'docs/index.md',
+    'docs/deploy.md',
+    'docs/configuration.md',
+    'docs/gmail.md',
+    'docs/testing.md',
+    'docs/migration.md',
+    'docs/troubleshooting.md',
+    'docs/agents.md',
     'PRIVACY.md',
     'SECURITY.md',
     'TERMS.md',
@@ -81,6 +93,8 @@ test('agent skill, prompts, config, and policies ship', async () => {
   assert.ok(packageJson.files.includes('skills'))
   assert.ok(packageJson.files.includes('prompts'))
   assert.ok(packageJson.files.includes('config'))
+  assert.ok(packageJson.files.includes('integrations'))
+  assert.ok(packageJson.files.includes('docs'))
 })
 
 test('no public metadata contains a personal support email or secret', () => {

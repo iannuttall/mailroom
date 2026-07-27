@@ -1,6 +1,10 @@
 import { MailroomError, sha256Hex, verifyIngressRequest } from '@mailroom/core'
-import { newId, nowIso } from './database.js'
 import { ingestEmail } from './ingest.js'
+import {
+  completeIngressEvent,
+  failIngressEvent,
+  startIngressEvent,
+} from './ingress-events.js'
 import type { WaitUntilContext } from './types.js'
 
 function requiredHeader(request: Request, name: string): string {
@@ -51,74 +55,30 @@ export async function receiveRelayEmail(
     throw new MailroomError('FORBIDDEN', 'The relay signature is invalid.')
   }
 
-  const existing = await env.DB.prepare(
-    'SELECT message_id, state FROM ingress_events WHERE idempotency_key = ?',
-  )
-    .bind(idempotencyKey)
-    .first<{ message_id: string | null; state: string }>()
-  if (existing?.message_id) {
-    return { messageId: existing.message_id, duplicate: true }
-  }
-  if (existing?.state === 'processing') {
-    throw new MailroomError(
-      'CONFLICT',
-      'This relay delivery is already being processed.',
-    )
-  }
-
-  const eventId = existing ? undefined : newId('ing')
-  const now = nowIso()
-  if (eventId) {
-    try {
-      await env.DB.prepare(
-        `INSERT INTO ingress_events
-          (id, idempotency_key, source, recipient, state, created_at, updated_at)
-        VALUES (?, ?, 'relay', ?, 'processing', ?, ?)`,
-      )
-        .bind(eventId, idempotencyKey, to, now, now)
-        .run()
-    } catch {
-      throw new MailroomError(
-        'CONFLICT',
-        'This relay delivery is already being processed.',
-      )
-    }
-  } else {
-    await env.DB.prepare(
-      `UPDATE ingress_events SET state = 'processing', error = NULL,
-        updated_at = ? WHERE idempotency_key = ?`,
-    )
-      .bind(now, idempotencyKey)
-      .run()
+  const event = await startIngressEvent(env.DB, {
+    idempotencyKey,
+    source: 'relay',
+    recipient: to,
+  })
+  if (event.state === 'duplicate') {
+    return { messageId: event.messageId, duplicate: true }
   }
 
   try {
     const result = await ingestEmail(env, executionCtx, {
       from,
       to,
+      mailbox: to,
+      direction: 'inbound',
       raw: new Blob([body]).stream(),
       rawSize: body.byteLength,
       headers: request.headers,
       source: 'relay',
     })
-    await env.DB.prepare(
-      `UPDATE ingress_events SET state = 'complete', message_id = ?,
-        updated_at = ? WHERE idempotency_key = ?`,
-    )
-      .bind(result.messageId, nowIso(), idempotencyKey)
-      .run()
+    await completeIngressEvent(env.DB, idempotencyKey, result.messageId)
     return result
   } catch (error) {
-    await env.DB.prepare(
-      `UPDATE ingress_events SET state = 'failed', error = ?,
-        updated_at = ? WHERE idempotency_key = ?`,
-    )
-      .bind(
-        error instanceof Error ? error.message.slice(0, 2_000) : String(error),
-        nowIso(),
-        idempotencyKey,
-      )
-      .run()
+    await failIngressEvent(env.DB, idempotencyKey, error)
     throw error
   }
 }

@@ -45,6 +45,10 @@ export const messagesCommand = defineCommand({
       type: 'string',
       description: 'Filter by unread, read, archived, or spam.',
     },
+    direction: {
+      type: 'string',
+      description: 'Filter by inbound or outbound.',
+    },
     limit: {
       type: 'string',
       description: 'Maximum number of messages.',
@@ -62,6 +66,7 @@ export const messagesCommand = defineCommand({
         Object.entries({
           inboxId: stringArg(args.inbox),
           status: stringArg(args.status),
+          direction: stringArg(args.direction),
           limit: stringArg(args.limit),
         }).filter(([, value]) => value !== undefined),
       ),

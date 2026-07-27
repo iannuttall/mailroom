@@ -8,14 +8,18 @@ export {
   validateDraftAgainstOffers,
 } from './automation.js'
 export {
+  importCanonicalRequest,
   ingressCanonicalRequest,
   relayCanonicalRequest,
+  type SignedImportHeaders,
   type SignedIngressHeaders,
   type SignedRelayHeaders,
   sha256Hex,
+  signImportRequest,
   signIngressRequest,
   signRelayRequest,
   verifyBearerToken,
+  verifyImportRequest,
   verifyIngressRequest,
   verifyRelayRequest,
 } from './crypto.js'

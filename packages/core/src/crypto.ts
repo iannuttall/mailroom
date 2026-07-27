@@ -16,6 +16,16 @@ export type SignedRelayHeaders = {
   bodySha256: string
 }
 
+export type SignedImportHeaders = {
+  timestamp: string
+  idempotencyKey: string
+  source: string
+  account: string
+  providerMessageId: string
+  mailbox: string
+  bodySha256: string
+}
+
 function bytesToHex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
@@ -73,6 +83,19 @@ export function relayCanonicalRequest(headers: SignedRelayHeaders): string {
   ].join('\n')
 }
 
+export function importCanonicalRequest(headers: SignedImportHeaders): string {
+  return [
+    'mailroom-import-v1',
+    headers.timestamp,
+    headers.idempotencyKey,
+    headers.source.toLowerCase(),
+    headers.account.toLowerCase(),
+    headers.providerMessageId,
+    headers.mailbox.toLowerCase(),
+    headers.bodySha256.toLowerCase(),
+  ].join('\n')
+}
+
 async function hmacKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     'raw',
@@ -103,6 +126,18 @@ export async function signRelayRequest(
     'HMAC',
     await hmacKey(secret),
     encoder.encode(relayCanonicalRequest(headers)),
+  )
+  return bytesToHex(new Uint8Array(signature))
+}
+
+export async function signImportRequest(
+  secret: string,
+  headers: SignedImportHeaders,
+): Promise<string> {
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    await hmacKey(secret),
+    encoder.encode(importCanonicalRequest(headers)),
   )
   return bytesToHex(new Uint8Array(signature))
 }
@@ -160,6 +195,34 @@ export async function verifyRelayRequest(
     await hmacKey(secret),
     toArrayBuffer(signature),
     encoder.encode(relayCanonicalRequest(headers)),
+  )
+}
+
+export async function verifyImportRequest(
+  secret: string,
+  headers: SignedImportHeaders,
+  signatureHex: string,
+  options: { now?: number; maxAgeMs?: number } = {},
+): Promise<boolean> {
+  const signature = hexToBytes(signatureHex)
+  if (!signature) return false
+
+  const timestamp = Number(headers.timestamp)
+  const now = options.now ?? Date.now()
+  const maxAgeMs = options.maxAgeMs ?? 5 * 60 * 1_000
+  if (
+    !Number.isFinite(timestamp) ||
+    timestamp > now + 30_000 ||
+    now - timestamp > maxAgeMs
+  ) {
+    return false
+  }
+
+  return crypto.subtle.verify(
+    'HMAC',
+    await hmacKey(secret),
+    toArrayBuffer(signature),
+    encoder.encode(importCanonicalRequest(headers)),
   )
 }
 

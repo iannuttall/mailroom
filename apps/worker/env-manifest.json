@@ -11,6 +11,9 @@
     "INGRESS_SECRET"
   ],
   "optionalSecrets": [
+    "GMAIL_SYNC_SECRET",
+    "MAILROOM_FORWARD_TO",
+    "MAILROOM_FORWARD_TO_BY_DOMAIN",
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_CHAT_ID"
   ],

@@ -18,6 +18,10 @@ The CLI stores the API token in the macOS Keychain and non-secret Worker profile
 metadata in the local user config directory. Environment variables remain
 under the user's control.
 
+The optional Gmail Apps Script reads matching Sent messages inside the user's
+Google account and sends their raw MIME to the self-hosted Worker. The Worker
+does not receive or store the Google OAuth credential.
+
 Self-hosters are responsible for retention, deletion, backups, legal notices,
 and access requests for their deployment. Mailroom does not provide a hosted
 service or collect telemetry.

@@ -16,7 +16,7 @@ npx @iannuttall/mailroom search "sponsorship"
 The npm package is not published until the first tagged release. Clone the
 repository and use `node dist/cli.js` during development.
 
-## Why
+## What Mailroom does
 
 Cloudflare Email Routing can receive mail for many domains without maintaining
 a conventional mailbox. Mailroom gives that mail one private home and makes it
@@ -29,6 +29,7 @@ useful to local agents without handing them an unlimited inbox or a send button.
 - Markdown prompts and structured offers.
 - Human approval before send.
 - A small signed relay for domains on another Cloudflare account.
+- Optional Gmail forwarding and Sent-mail synchronization.
 
 ## Shape
 
@@ -36,15 +37,21 @@ useful to local agents without handing them an unlimited inbox or a send button.
 Cloudflare Email Routing
           |
           v
-central Worker --> R2 raw mail and attachments
-       |         D1 messages, routes, drafts, audit trail
-       |         AI Search compact semantic retrieval
+central Worker --> R2 raw mail + pending recovery job
+       |
+       +--> verified Gmail destination
+       |
+       +--> Queue --> D1 messages, routes, drafts, audit trail
+                    R2 attachments
+                    AI Search compact semantic retrieval
+             ^
+             |
+       five-minute pending-job sweep
        |
        +--> private operations API
                  |
                  +--> mailroom CLI
                  +--> stdio MCP: list, describe, run
-                 +--> future Cloudflare Agent
 ```
 
 For a domain in another Cloudflare account, deploy `apps/ingress` in that
@@ -58,6 +65,11 @@ locally through that account's Email Service binding. It stores no inbox state.
 - a paid Cloudflare Workers account
 - Cloudflare Email Routing and Email Service for each sending account
 - D1, R2, Workers AI, and AI Search on the central account
+
+Cloudflare currently requires Workers Paid for Email Sending to arbitrary
+recipients. Email Routing is available on Free and Paid. Check
+[current Email Service pricing](https://developers.cloudflare.com/email-service/platform/pricing/)
+because Email Sending is still a beta service.
 
 ## Develop
 
@@ -82,6 +94,24 @@ Neither Worker configuration contains a real account id, database id, domain,
 sender, route, or secret. Follow [the deployment guide](docs/deploy.md) before
 deploying.
 
+Use [Gmail as the human inbox](docs/gmail.md) without POP. Mailroom can forward
+stored inbound mail to a verified Gmail destination, while the included Apps
+Script returns manual Gmail Sent messages to the correct Mailroom thread.
+
+## Documentation
+
+The [documentation index](docs/index.md) gives the complete setup order.
+
+| Guide | Covers |
+| --- | --- |
+| [Deploy Mailroom](docs/deploy.md) | Cloudflare resources, secrets, Worker deployment, CLI, and first route |
+| [Configure Mailroom](docs/configuration.md) | Bindings, variables, secrets, tokens, and local state |
+| [Use Gmail](docs/gmail.md) | Forwarding, Cloudflare SMTP, Send As, Apps Script, and mobile behavior |
+| [Test the installation](docs/testing.md) | Storage, search, routing, threading, Gmail, drafts, and failure tests |
+| [Move a mail domain](docs/migration.md) | Safe MX cutover, monitoring, and rollback |
+| [Fix setup failures](docs/troubleshooting.md) | Worker, routing, SMTP, and Apps Script errors |
+| [Use an installation agent](docs/agents.md) | Terminal and authenticated-browser handoff rules |
+
 ## CLI
 
 ```txt
@@ -105,7 +135,7 @@ are available for non-interactive environments.
 
 ## MCP
 
-Mailroom deliberately exposes three tools:
+Mailroom exposes three tools:
 
 - `mailroom_list_operations`
 - `mailroom_describe_operation`
@@ -140,6 +170,7 @@ See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 - `packages/mcp`: local stdio MCP wrapper
 - `apps/worker`: central mailbox Worker
 - `apps/ingress`: cross-account email relay
+- `integrations/gmail-sent-sync`: user-owned Apps Script for manual replies
 - `migrations`: D1 schema
 - `prompts`: versioned Markdown instructions
 - `config`: safe automation, offer, and search metadata examples
