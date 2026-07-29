@@ -26,6 +26,7 @@ function emailMessage(): ForwardableEmailMessage {
   return {
     from: 'sender@example.com',
     to: 'anything@ian.is',
+    headers: new Headers(),
   } as ForwardableEmailMessage
 }
 
@@ -77,5 +78,34 @@ describe('inbound handler', () => {
       expect.anything(),
       'pending/inbound/example.json',
     )
+  })
+
+  it('archives and processes an automatic reply without forwarding it', async () => {
+    mocks.archive.mockResolvedValue({
+      markerKey: 'pending/inbound/automatic-reply.json',
+    })
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const message = {
+      ...emailMessage(),
+      headers: new Headers({
+        'Auto-Submitted': 'auto-generated',
+        'X-MS-Exchange-Generated-Message-Source': 'Mailbox Rules Agent',
+      }),
+    } as ForwardableEmailMessage
+
+    await expect(
+      handleInboundEmail(message, {
+        MAILROOM_FORWARD_TO: 'owner@gmail.com',
+      } as Env),
+    ).resolves.toBeUndefined()
+    expect(mocks.forward).not.toHaveBeenCalled()
+    expect(mocks.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      'pending/inbound/automatic-reply.json',
+    )
+    expect(log).toHaveBeenCalledWith('mailroom_auto_reply_forward_suppressed', {
+      recipient: 'anything@ian.is',
+    })
+    log.mockRestore()
   })
 })
