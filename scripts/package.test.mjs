@@ -84,6 +84,7 @@ test('agent skill, prompts, integrations, config, and policies ship', async () =
     'docs/migration.md',
     'docs/troubleshooting.md',
     'docs/agents.md',
+    'assets/mailroom.svg',
     'PRIVACY.md',
     'SECURITY.md',
     'TERMS.md',
