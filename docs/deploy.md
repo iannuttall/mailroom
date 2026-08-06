@@ -295,6 +295,10 @@ The relay also forwards accepted inbound messages to a Gmail destination
 verified in the domain account. It stores no messages, threads, drafts, or
 attachments. Those remain in central Mailroom.
 
+Manual Gmail Send As replies use Cloudflare SMTP directly and do not pass
+through the relay Worker. The outbound relay path above is for sends initiated
+by central Mailroom.
+
 Authenticate Wrangler to the domain's account. Copy the ingress template:
 
 ```sh

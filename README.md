@@ -159,7 +159,8 @@ not another Mailroom inbox. It signs inbound MIME before passing it to the
 central Worker, forwards accepted messages to a verified Gmail destination in
 the domain account, and sends outbound mail through that account's Email
 Service binding. Inbox state, threads, drafts, and the raw archive remain in
-central Mailroom.
+central Mailroom. Manual Gmail replies use Cloudflare SMTP directly; they do
+not pass through the relay Worker.
 
 The [architecture notes](docs/architecture.md) explain the storage model, recovery path, authentication, search fallback, and account boundaries.
 
