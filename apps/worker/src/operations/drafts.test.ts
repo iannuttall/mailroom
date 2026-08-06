@@ -6,9 +6,7 @@ describe('draftRecipient', () => {
     expect(
       draftRecipient({
         sender: 'notifications@keep.md',
-        headers: JSON.stringify({
-          'reply-to': ['Ian Nuttall <ianpaulnuttall@gmail.com>'],
-        }),
+        message_reply_to: 'Ian Nuttall <ianpaulnuttall@gmail.com>',
       }),
     ).toBe('ianpaulnuttall@gmail.com')
   })
@@ -17,7 +15,7 @@ describe('draftRecipient', () => {
     expect(
       draftRecipient({
         sender: 'sender@example.com',
-        headers: '{}',
+        message_reply_to: null,
       }),
     ).toBe('sender@example.com')
   })

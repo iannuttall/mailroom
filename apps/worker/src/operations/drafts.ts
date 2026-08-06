@@ -29,9 +29,8 @@ type Input = Record<string, unknown>
 type Row = Record<string, unknown>
 
 export function draftRecipient(message: Row): string {
-  const headers = parseJson<Record<string, string[]>>(message.headers, {})
-  for (const value of headers['reply-to'] ?? []) {
-    const address = emailAddresses(addressParser(value))[0]
+  if (typeof message.message_reply_to === 'string') {
+    const address = emailAddresses(addressParser(message.message_reply_to))[0]
     if (address) return address
   }
   return String(message.sender)
@@ -140,7 +139,8 @@ export async function createDraft(
 ): Promise<unknown> {
   const sourceMessageId = inputString(input, 'messageId')
   const sourceMessage = await context.env.DB.prepare(
-    `SELECT m.*, i.local_part, d.domain, d.from_address, d.reply_to
+    `SELECT m.*, i.local_part, d.domain, d.from_address, d.reply_to,
+      json_extract(m.headers, '$."reply-to"[0]') AS message_reply_to
     FROM messages m
     JOIN inboxes i ON i.id = m.inbox_id
     JOIN domains d ON d.id = i.domain_id
