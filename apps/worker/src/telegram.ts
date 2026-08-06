@@ -8,7 +8,13 @@ export async function notifyTelegram(
     preview: string
   },
 ): Promise<void> {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return
+  if (
+    !env.TELEGRAM_BOT_TOKEN ||
+    !env.TELEGRAM_CHAT_ID ||
+    !telegramMailboxEnabled(message.to, env.TELEGRAM_NOTIFY_MAILBOXES)
+  ) {
+    return
+  }
 
   const text = [
     'New Mailroom email',
@@ -38,5 +44,38 @@ export async function notifyTelegram(
       status: response.status,
       body: (await response.text()).slice(0, 500),
     })
+  }
+}
+
+export function telegramMailboxEnabled(
+  mailbox: string,
+  configuredMailboxes: string | undefined,
+): boolean {
+  const target = mailbox.trim().toLowerCase()
+  return telegramNotificationMailboxes(configuredMailboxes).includes(target)
+}
+
+export function telegramNotificationMailboxes(
+  configuredMailboxes: string | undefined,
+): string[] {
+  if (!configuredMailboxes?.trim()) return []
+
+  try {
+    const parsed: unknown = JSON.parse(configuredMailboxes)
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.every((entry) => typeof entry === 'string')
+    ) {
+      throw new Error('expected a JSON array of mailbox addresses')
+    }
+
+    return parsed
+      .map((entry) => entry.trim().toLowerCase())
+      .filter((entry) => entry.length > 0)
+  } catch (error) {
+    console.error('mailroom_telegram_config_invalid', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return []
   }
 }

@@ -77,6 +77,7 @@ before sending attachments.
 | `MAILROOM_FORWARD_TO_BY_DOMAIN` | Only for per-domain forwarding | Nobody | JSON map from recipient domains to verified Email Routing destinations |
 | `TELEGRAM_BOT_TOKEN` | Only for Telegram | Telegram | Sends accepted-message notifications |
 | `TELEGRAM_CHAT_ID` | Only for Telegram | Telegram | Selects the notification chat |
+| `TELEGRAM_NOTIFY_MAILBOXES` | Only for Telegram | Nobody | JSON array of exact mailbox addresses that may trigger notifications |
 
 Use a different random value for each authentication boundary. Do not reuse a
 Cloudflare API token for a Mailroom secret.
@@ -89,6 +90,16 @@ pnpm --filter @mailroom/worker exec wrangler secret put MAILROOM_API_TOKEN \
 ```
 
 Repeat the command with each secret name you need.
+
+Telegram notifications are off unless all three Telegram secrets are present.
+Set `TELEGRAM_NOTIFY_MAILBOXES` to an explicit list of mailbox addresses:
+
+```json
+["alerts@example.com", "support@example.net"]
+```
+
+Use `[]` or remove any one of the Telegram secrets to disable all Telegram
+notifications. The allowlist matches exact addresses without case sensitivity.
 
 ## Cross-account ingress secrets
 

@@ -24,8 +24,8 @@ re-enqueues any jobs still present. Queue delivery is idempotent. A unique
 inbox and provider-message key prevents concurrent retries from creating a
 second message.
 
-AI Search indexing and Telegram notifications run after the D1 write. Their
-failure does not remove the raw MIME or parsed message.
+AI Search indexing and explicitly allowlisted Telegram notifications run after
+the D1 write. Their failure does not remove the raw MIME or parsed message.
 
 D1 is authoritative for state. R2 is authoritative for original bytes. AI
 Search is a rebuildable retrieval index.

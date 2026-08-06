@@ -166,10 +166,17 @@ pnpm --filter @mailroom/worker exec wrangler secret put TELEGRAM_BOT_TOKEN \
 
 pnpm --filter @mailroom/worker exec wrangler secret put TELEGRAM_CHAT_ID \
   --config wrangler.local.jsonc
+
+pnpm --filter @mailroom/worker exec wrangler secret put \
+  TELEGRAM_NOTIFY_MAILBOXES --config wrangler.local.jsonc
 ```
 
 Only set optional secrets that are in use. Empty values are harder to diagnose
 than absent optional features.
+
+For `TELEGRAM_NOTIFY_MAILBOXES`, enter a JSON array containing only the exact
+mailbox addresses that should trigger notifications. Telegram stays off when
+the allowlist is absent or empty.
 
 ## Apply the database migration and deploy
 

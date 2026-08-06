@@ -1,4 +1,5 @@
 import { MAILROOM_VERSION } from '@mailroom/core'
+import { telegramNotificationMailboxes } from '../telegram.js'
 import type { OperationContext } from '../types.js'
 
 export async function systemStatus(
@@ -19,7 +20,10 @@ export async function systemStatus(
       aiSearch: Boolean(context.env.AI_SEARCH),
       email: Boolean(context.env.EMAIL),
       telegram: Boolean(
-        context.env.TELEGRAM_BOT_TOKEN && context.env.TELEGRAM_CHAT_ID,
+        context.env.TELEGRAM_BOT_TOKEN &&
+          context.env.TELEGRAM_CHAT_ID &&
+          telegramNotificationMailboxes(context.env.TELEGRAM_NOTIFY_MAILBOXES)
+            .length,
       ),
     },
     automation: {
