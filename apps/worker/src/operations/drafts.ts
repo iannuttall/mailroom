@@ -1,5 +1,6 @@
 import {
   MailroomError,
+  normalizeMessageId,
   normalizeSubject,
   validateDraftAgainstOffers,
 } from '@mailroom/core'
@@ -362,6 +363,7 @@ export async function sendDraft(
     )
     const sentAt = nowIso()
     const messageId = newId('msg')
+    const rfcMessageId = normalizeMessageId(sent.messageId)
     await batchOrThrow(context.env.DB, [
       context.env.DB.prepare(
         `INSERT INTO messages (
@@ -371,13 +373,14 @@ export async function sendDraft(
           size_bytes, attachment_count, search_status, provider_message_id,
           received_at, created_at
         ) VALUES (
-          ?, ?, ?, 'outbound', 'read', NULL, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?,
+          ?, ?, ?, 'outbound', 'read', ?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?,
           NULL, NULL, ?, 0, 'pending', ?, ?, ?
         )`,
       ).bind(
         messageId,
         draft.thread_id,
         draft.inbox_id,
+        rfcMessageId,
         draft.rfc_message_id,
         JSON.stringify(references),
         draft.sender,
