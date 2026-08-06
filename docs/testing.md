@@ -87,7 +87,9 @@ Confirm:
 - each intended address has an enabled inbox;
 - an exact route uses the correct local part;
 - a catch-all exists only when it was requested;
-- a domain in another account has the correct ingress `relayUrl`.
+- a domain in another account has the correct ingress `relayUrl`;
+- that ingress account has a verified Gmail destination and the matching
+  forwarding secret.
 
 Do not start inbound testing while these records are wrong. Cloudflare can
 deliver the message to the Worker, but Mailroom cannot finish processing it
@@ -190,6 +192,10 @@ Check all of these:
 - the original domain recipient is preserved;
 - search finds the unique marker;
 - the Worker log has no unhandled error.
+
+For a relayed domain, also confirm the ingress log shows a successful central
+request before the Gmail forward. Send one automatic-reply fixture and confirm
+Mailroom stores it without forwarding it to Gmail.
 
 Send the same raw test message twice only through a controlled integration
 test. The ingress idempotency key must prevent a second stored message.
@@ -303,6 +309,8 @@ Run controlled failures without exposing a real secret:
 - an already used send idempotency key cannot create another delivery;
 - a message over the configured byte limit is rejected;
 - removing the forwarding destination does not remove the stored Mailroom copy.
+- a relayed message rejected by central Mailroom is not forwarded to Gmail and
+  is retried by Email Routing.
 
 Restore every changed secret, route, or destination after the test.
 

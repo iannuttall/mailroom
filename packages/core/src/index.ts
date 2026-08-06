@@ -33,6 +33,10 @@ export {
   type SearchDocumentMessage,
 } from './email.js'
 export {
+  isAutomaticReply,
+  resolveForwardDestination,
+} from './email-routing.js'
+export {
   MAILROOM_ERROR_CODES,
   MailroomError,
   type MailroomErrorCode,

@@ -283,6 +283,18 @@ No public mail moves at this point.
 
 Skip this section when the mail domain belongs to the central account.
 
+The ingress relay is a small, stateless Worker in the account that owns the
+domain. It is a secure bridge, not a second Mailroom installation:
+
+```txt
+Inbound:  domain Email Routing -> relay -> signed request -> central Mailroom
+Outbound: central Mailroom -> signed request -> relay -> domain Email Sending
+```
+
+The relay also forwards accepted inbound messages to a Gmail destination
+verified in the domain account. It stores no messages, threads, drafts, or
+attachments. Those remain in central Mailroom.
+
 Authenticate Wrangler to the domain's account. Copy the ingress template:
 
 ```sh
@@ -296,11 +308,29 @@ Edit the copy:
 - set `ALLOWED_FROM_DOMAINS` to the domains in this account;
 - restrict `allowed_sender_addresses` to the addresses Mailroom may send from.
 
+Add and verify the Gmail destination under Email Routing in this domain's
+account. Destination verification is account-specific, even when the same
+Gmail address is already verified in the central account.
+
 Store the same `INGRESS_SECRET` used by the central Worker:
 
 ```sh
 pnpm --filter @mailroom/ingress exec wrangler secret put INGRESS_SECRET \
   --config wrangler.local.jsonc
+```
+
+Store the verified Gmail destination on the ingress Worker. Use the per-domain
+map when the Worker serves more than one domain:
+
+```sh
+pnpm --filter @mailroom/ingress exec wrangler secret put \
+  MAILROOM_FORWARD_TO_BY_DOMAIN --config wrangler.local.jsonc
+```
+
+Enter one line in this shape:
+
+```json
+{"other-example.com":"owner+other-example@gmail.com"}
 ```
 
 Generate types and deploy:
@@ -322,6 +352,9 @@ mailroom operations run domains.upsert \
 ```
 
 The account still needs Email Sending onboarding for its own sender domain.
+Inbound forwarding needs only the verified destination and works before Email
+Sending onboarding. Gmail replies and Mailroom-managed outbound drafts need
+Email Sending.
 
 ## Stop before changing MX records
 

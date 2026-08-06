@@ -70,7 +70,7 @@ export async function receiveRelayEmail(
       to,
       mailbox: to,
       direction: 'inbound',
-      raw: new Blob([body]).stream(),
+      rawBytes: body,
       rawSize: body.byteLength,
       headers: request.headers,
       source: 'relay',

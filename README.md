@@ -153,7 +153,13 @@ central Worker --> R2 original mail + pending recovery marker
                  +--> stdio MCP: list, describe, run
 ```
 
-Domains in another Cloudflare account use the small `apps/ingress` relay. It signs inbound MIME to the central Worker and sends outbound mail through that account's Email Service binding. It stores no inbox state.
+Domains in another Cloudflare account use the small `apps/ingress` relay. The
+relay is a stateless mini Worker deployed in the account that owns the domain,
+not another Mailroom inbox. It signs inbound MIME before passing it to the
+central Worker, forwards accepted messages to a verified Gmail destination in
+the domain account, and sends outbound mail through that account's Email
+Service binding. Inbox state, threads, drafts, and the raw archive remain in
+central Mailroom.
 
 The [architecture notes](docs/architecture.md) explain the storage model, recovery path, authentication, search fallback, and account boundaries.
 

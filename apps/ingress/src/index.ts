@@ -1,5 +1,7 @@
 import {
+  isAutomaticReply,
   outboundMessageSchema,
+  resolveForwardDestination,
   sha256Hex,
   signIngressRequest,
   verifyRelayRequest,
@@ -101,7 +103,7 @@ async function send(request: Request, env: Env): Promise<Response> {
   return json({ ok: true, messageId: result.messageId })
 }
 
-async function relayInbound(
+export async function relayInbound(
   message: ForwardableEmailMessage,
   env: Env,
 ): Promise<void> {
@@ -141,6 +143,20 @@ async function relayInbound(
       `Central Mailroom rejected the email (${response.status}): ${detail}`,
     )
   }
+
+  if (isAutomaticReply(message.headers)) {
+    console.log('mailroom_auto_reply_forward_suppressed', {
+      recipient: message.to,
+    })
+    return
+  }
+
+  const forwardDestination = resolveForwardDestination(
+    message.to,
+    env.MAILROOM_FORWARD_TO_BY_DOMAIN,
+    env.MAILROOM_FORWARD_TO,
+  )
+  if (forwardDestination) await message.forward(forwardDestination)
 }
 
 export default {

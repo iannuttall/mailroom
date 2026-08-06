@@ -1,1 +1,3 @@
 INGRESS_SECRET=replace-with-the-same-secret-used-by-the-central-worker
+MAILROOM_FORWARD_TO=
+MAILROOM_FORWARD_TO_BY_DOMAIN=

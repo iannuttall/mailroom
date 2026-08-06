@@ -5,6 +5,10 @@
   "requiredSecrets": [
     "INGRESS_SECRET"
   ],
+  "optionalSecrets": [
+    "MAILROOM_FORWARD_TO",
+    "MAILROOM_FORWARD_TO_BY_DOMAIN"
+  ],
   "variables": {
     "CENTRAL_MAILROOM_URL": "Public HTTPS URL of the central Worker",
     "ALLOWED_FROM_DOMAINS": "Comma-separated domains this relay may send from",

@@ -25,7 +25,8 @@ export type StoredEmailEnvelope = {
   to: string
   mailbox: string
   direction: 'inbound' | 'outbound'
-  raw: ReadableStream<Uint8Array>
+  raw?: ReadableStream<Uint8Array>
+  rawBytes?: ArrayBuffer
   rawSize: number
   headers: Headers
   source: 'email-routing' | 'relay' | 'gmail-sent'
@@ -65,6 +66,26 @@ function parsedHeaders(parsed: ParsedEmail): Record<string, string[]> {
   const headers = new Headers()
   for (const header of parsed.headers) headers.append(header.key, header.value)
   return headersToRecord(headers)
+}
+
+export async function parseAndArchiveRawBytes(
+  bucket: R2Bucket,
+  key: string,
+  raw: ArrayBuffer,
+  metadata: Record<string, string>,
+): Promise<ParsedEmail> {
+  const [parsed] = await Promise.all([
+    PostalMime.parse(raw, {
+      attachmentEncoding: 'arraybuffer',
+      maxNestingDepth: 20,
+      maxHeadersSize: 512 * 1024,
+    }),
+    bucket.put(key, raw, {
+      httpMetadata: { contentType: 'message/rfc822' },
+      customMetadata: metadata,
+    }),
+  ])
+  return parsed
 }
 
 async function findThreadId(
@@ -152,13 +173,19 @@ export async function ingestEmail(
     envelope.archivedRawKey ?? `raw/${route.domain}/${messageId}.eml`
 
   let parsed: ParsedEmail
-  if (envelope.archivedRawKey) {
+  if (envelope.archivedRawKey && envelope.raw) {
     parsed = await PostalMime.parse(envelope.raw, {
       attachmentEncoding: 'arraybuffer',
       maxNestingDepth: 20,
       maxHeadersSize: 512 * 1024,
     })
-  } else {
+  } else if (envelope.rawBytes) {
+    parsed = await parseAndArchiveRawBytes(env.RAW, rawKey, envelope.rawBytes, {
+      mailbox: envelope.mailbox,
+      direction: envelope.direction,
+      source: envelope.source,
+    })
+  } else if (envelope.raw) {
     const [storageStream, parseStream] = envelope.raw.tee()
     const fixed = new FixedLengthStream(envelope.rawSize)
     const pipe = storageStream.pipeTo(fixed.writable)
@@ -178,6 +205,8 @@ export async function ingestEmail(
       }),
       pipe,
     ])
+  } else {
+    throw new Error('Email content is missing.')
   }
 
   const rfcMessageId = normalizeMessageId(parsed.messageId)

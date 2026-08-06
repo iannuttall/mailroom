@@ -161,7 +161,7 @@ export async function receiveGmailSentEmail(
       to: delivery.mailbox,
       mailbox: delivery.mailbox,
       direction: 'outbound',
-      raw: new Blob([delivery.body]).stream(),
+      rawBytes: delivery.body,
       rawSize: delivery.body.byteLength,
       headers: request.headers,
       source: SOURCE,

@@ -36,7 +36,8 @@ the later inbound cutover.
 
 Open the
 [Cloudflare Email Routing dashboard](https://dash.cloudflare.com/?to=%2F%3Aaccount%2Femail-service%2Frouting)
-and select the account that owns the central Worker.
+and select the account that owns the mail domain. For a direct domain this is
+the central account. For a relayed domain this is the ingress account.
 
 Open `Destination Addresses`, add the Gmail address, and submit it. Cloudflare
 sends a verification email to Gmail. Open it and verify the destination.
@@ -45,10 +46,18 @@ Destination addresses are account-level records and can be reused for domains
 in that Cloudflare account. Mailroom can only call `message.forward()` for a
 verified destination.
 
-For one destination, store the exact Gmail address as a Worker secret:
+For one destination, store the exact Gmail address on the Worker that receives
+Email Routing for this domain:
 
 ```sh
 pnpm --filter @mailroom/worker exec wrangler secret put MAILROOM_FORWARD_TO \
+  --config wrangler.local.jsonc
+```
+
+For a relayed domain, use the ingress package instead:
+
+```sh
+pnpm --filter @mailroom/ingress exec wrangler secret put MAILROOM_FORWARD_TO \
   --config wrangler.local.jsonc
 ```
 

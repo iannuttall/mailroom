@@ -90,6 +90,29 @@ pnpm --filter @mailroom/worker exec wrangler secret put MAILROOM_API_TOKEN \
 
 Repeat the command with each secret name you need.
 
+## Cross-account ingress secrets
+
+Every ingress Worker needs the same `INGRESS_SECRET` as the central Worker.
+When it should also deliver accepted mail to Gmail, configure one or both of
+these secrets against the ingress Worker:
+
+| Secret | Purpose |
+| --- | --- |
+| `MAILROOM_FORWARD_TO` | Fallback verified destination in the domain's Cloudflare account |
+| `MAILROOM_FORWARD_TO_BY_DOMAIN` | JSON map from recipient domains to verified destinations in that account |
+
+The ingress Worker submits the signed message to central Mailroom first. It
+forwards the original message only after central Mailroom accepts it. Automatic
+replies are stored but not forwarded.
+
+```sh
+pnpm --filter @mailroom/ingress exec wrangler secret put \
+  MAILROOM_FORWARD_TO_BY_DOMAIN --config wrangler.local.jsonc
+```
+
+Use the central Worker forwarding secrets only for domains in its own account.
+Use the ingress Worker forwarding secrets for domains in another account.
+
 On macOS you can create a random value without printing it:
 
 ```sh
