@@ -4,6 +4,7 @@ import {
   normalizeSubject,
   validateDraftAgainstOffers,
 } from '@mailroom/core'
+import { addressParser } from 'postal-mime'
 import {
   batchOrThrow,
   cursorFor,
@@ -12,6 +13,7 @@ import {
   nowIso,
   parseJson,
 } from '../database.js'
+import { emailAddresses } from '../email-addresses.js'
 import {
   inputNumber,
   inputString,
@@ -25,6 +27,15 @@ import type { OperationContext } from '../types.js'
 
 type Input = Record<string, unknown>
 type Row = Record<string, unknown>
+
+export function draftRecipient(message: Row): string {
+  const headers = parseJson<Record<string, string[]>>(message.headers, {})
+  for (const value of headers['reply-to'] ?? []) {
+    const address = emailAddresses(addressParser(value))[0]
+    if (address) return address
+  }
+  return String(message.sender)
+}
 
 function draftSummary(row: Row): Record<string, unknown> {
   return {
@@ -153,6 +164,7 @@ export async function createDraft(
   const sender =
     (sourceMessage.from_address as string | null) ??
     `${sourceMessage.local_part}@${sourceMessage.domain}`
+  const recipient = draftRecipient(sourceMessage)
   const originalSubject = String(sourceMessage.subject ?? '')
   const subject =
     optionalString(input, 'subject') ??
@@ -172,7 +184,7 @@ export async function createDraft(
       id,
       sourceMessageId,
       sourceMessage.thread_id,
-      sourceMessage.sender,
+      recipient,
       sender,
       sourceMessage.reply_to,
       subject,
@@ -202,7 +214,7 @@ export async function createDraft(
   return {
     id,
     status: 'pending',
-    recipient: sourceMessage.sender,
+    recipient,
     sender,
     subject,
     validation,
