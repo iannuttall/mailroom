@@ -25,3 +25,4 @@ minimumReleaseAgeExclude:
   - '@turbo/windows-arm64@2.10.7'
   - turbo@2.10.7
   - '@cloudflare/workers-types@5.20260726.1'
+  - nanoid@3.3.18
