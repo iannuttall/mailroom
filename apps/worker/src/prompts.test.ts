@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  getAutomationsConfig,
-  getOffersConfig,
-  getPrompt,
-  listPrompts,
-} from './prompts.js'
+import { getAutomationsConfig, getPrompt, listPrompts } from './prompts.js'
 
 describe('prompt and automation configuration', () => {
   it('loads versioned Markdown prompts with SHA-256 hashes', async () => {
@@ -18,12 +13,11 @@ describe('prompt and automation configuration', () => {
     )
   })
 
-  it('ships with all automations disabled and no invented offers', () => {
+  it('ships with all automations disabled', () => {
     expect(
       getAutomationsConfig().automations.every(
         (automation) => !automation.enabled,
       ),
     ).toBe(true)
-    expect(getOffersConfig().offers).toEqual([])
   })
 })

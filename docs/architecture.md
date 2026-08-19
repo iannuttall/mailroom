@@ -84,8 +84,8 @@ registered operation lacks an implementation.
 
 ## Sending
 
-A stored inbound message may produce a pending draft. Deterministic validation
-checks price and URL claims against structured offers.
+A stored inbound message may produce a pending draft. Product-specific content
+checks belong in the client or automation that creates the draft.
 
 Approval changes state but does not send. Sending accepts only an approved
 draft and records the idempotency key before calling Email Service or a

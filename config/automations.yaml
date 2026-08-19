@@ -6,4 +6,3 @@ automations:
     minConfidence: 0.92
     action: draft
     approval: telegram
-    offerIds: []

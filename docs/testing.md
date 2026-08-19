@@ -260,7 +260,7 @@ Create a draft:
 
 ```sh
 mailroom operations run drafts.create \
-  --params '{"messageId":"msg_replace","subject":"Re: Mailroom test","text":"This is a Mailroom delivery test.","offerIds":[],"source":"manual"}' \
+  --params '{"messageId":"msg_replace","subject":"Re: Mailroom test","text":"This is a Mailroom delivery test.","source":"manual"}' \
   --json
 ```
 

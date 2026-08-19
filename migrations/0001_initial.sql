@@ -133,7 +133,6 @@ CREATE TABLE drafts (
   subject TEXT NOT NULL,
   text_body TEXT NOT NULL,
   html_body TEXT,
-  offer_ids TEXT NOT NULL DEFAULT '[]',
   validation TEXT NOT NULL,
   source TEXT NOT NULL,
   prompt_id TEXT,

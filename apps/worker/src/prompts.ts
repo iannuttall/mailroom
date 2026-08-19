@@ -1,13 +1,10 @@
 import {
   type AutomationsConfig,
   automationsConfigSchema,
-  type OffersConfig,
-  offersConfigSchema,
   sha256Hex,
 } from '@mailroom/core'
 import { parse } from 'yaml'
 import automationsSource from '../../../config/automations.yaml'
-import offersSource from '../../../config/offers.yaml'
 import spamClassify from '../../../prompts/classify/spam.md'
 import sponsorshipClassify from '../../../prompts/classify/sponsorship.md'
 import sponsorshipDraft from '../../../prompts/draft/sponsorship.md'
@@ -90,8 +87,4 @@ export async function getPrompt(id: string): Promise<PromptRecord | undefined> {
 
 export function getAutomationsConfig(): AutomationsConfig {
   return automationsConfigSchema.parse(parse(automationsSource))
-}
-
-export function getOffersConfig(): OffersConfig {
-  return offersConfigSchema.parse(parse(offersSource))
 }

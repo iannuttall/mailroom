@@ -120,7 +120,7 @@ The skill teaches agents how to search, inspect a message, prepare a draft, requ
 
 Email bodies and attachments are untrusted input. Automation is disabled in the shipped configuration, and classification tests cannot store drafts or send mail.
 
-Creating a draft, approving it, and sending it are separate operations. Outbound attempts are recorded before delivery and require an idempotency key. Quoted prices and links are checked against `config/offers.yaml` so a generated reply cannot invent either one.
+Creating a draft, approving it, and sending it are separate operations. Outbound attempts are recorded before delivery and require an idempotency key. Drafts can contain normal email content, including currency symbols and web links.
 
 Secrets belong in Wrangler secrets or the macOS Keychain. Do not put them in Worker variables, configuration files, fixtures, logs, issues, or prompts. [SECURITY.md](SECURITY.md) covers private vulnerability reporting and the trust boundaries in more detail.
 
@@ -215,7 +215,7 @@ apps/ingress                  cross-account email relay
 integrations/gmail-sent-sync  user-owned Apps Script
 migrations                    D1 schema
 prompts                       versioned agent instructions
-config                        safe automation and offer examples
+config                        safe automation examples
 skills/mailroom               packaged agent workflow
 ```
 

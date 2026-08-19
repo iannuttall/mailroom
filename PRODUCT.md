@@ -38,8 +38,8 @@ holds parsed messages, threads, routes, drafts, approvals, and delivery history.
 - A human or explicitly authorised agent approves outbound drafts.
 - Search and discovery return compact results before full content.
 - Raw email is never included unless the caller asks for it.
-- Prompts are Markdown. Prices, links, limits, and expiry dates are structured
-  configuration.
+- Prompts are Markdown. Mailroom does not apply product-specific content rules
+  to drafts.
 - One public npm package contains the library, CLI, MCP server, prompts, and
   agent skill.
 
