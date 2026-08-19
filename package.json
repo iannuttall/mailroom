@@ -1,6 +1,6 @@
 {
   "name": "@iannuttall/mailroom",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Private email infrastructure for people and AI agents.",
   "type": "module",
   "license": "Apache-2.0",
@@ -36,7 +36,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "mailroom": "./dist/cli.js"
+    "mailroom": "dist/cli.js"
   },
   "files": [
     "assets",

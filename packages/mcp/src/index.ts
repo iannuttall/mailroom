@@ -27,7 +27,7 @@ export function createMcpServer(
 
   const server = new McpServer({
     name: 'mailroom',
-    version: options.version ?? '0.1.0',
+    version: options.version ?? '0.1.1',
   })
   registerDiscoveryTools(server, client)
   return server

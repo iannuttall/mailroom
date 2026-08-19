@@ -80,4 +80,4 @@ export {
   routeRecordSchema,
 } from './schemas.js'
 
-export const MAILROOM_VERSION = '0.1.0'
+export const MAILROOM_VERSION = '0.1.1'
