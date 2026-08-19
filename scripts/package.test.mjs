@@ -10,7 +10,7 @@ const packageJson = JSON.parse(await readFile('package.json', 'utf8'))
 test('the public package has one API, CLI, and MCP surface', () => {
   assert.equal(packageJson.name, '@iannuttall/mailroom')
   assert.equal(packageJson.private, undefined)
-  assert.equal(packageJson.bin.mailroom, './dist/cli.js')
+  assert.equal(packageJson.bin.mailroom, 'dist/cli.js')
   assert.equal(packageJson.exports['.'].import, './dist/index.js')
   assert.equal(packageJson.exports['./mcp'].import, './dist/mcp.js')
   assert.equal(packageJson.license, 'Apache-2.0')
