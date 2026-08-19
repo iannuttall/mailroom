@@ -72,7 +72,6 @@ test('agent skill, prompts, integrations, config, and policies ship', async () =
     'prompts/shared/safety.md',
     'prompts/classify/sponsorship.md',
     'config/automations.yaml',
-    'config/offers.yaml',
     'integrations/gmail-sent-sync/Code.js',
     'integrations/gmail-sent-sync/appsscript.json',
     'integrations/gmail-sent-sync/README.md',

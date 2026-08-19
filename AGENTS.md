@@ -33,7 +33,7 @@ configured separately under `apps/`.
 ## Repository map
 
 - `packages/core`: schemas, operation registry, API client, parsing helpers,
-  routing, search documents, automation validation, and shared types.
+  routing, search documents, automation configuration, and shared types.
 - `packages/cli`: the `mailroom` command, Keychain-backed auth, curated help,
   and human output.
 - `packages/mcp`: a stdio MCP server exposing compact list, describe, and run
@@ -43,7 +43,7 @@ configured separately under `apps/`.
 - `apps/ingress`: small cross-account relay for signed inbound and outbound
   delivery.
 - `prompts`: versioned Markdown instructions used by optional automation.
-- `config`: non-secret automation and offer examples.
+- `config`: non-secret automation examples.
 - `migrations`: D1 migrations owned by the central Worker.
 - `skills/mailroom/SKILL.md`: one router skill for discovery.
 - `docs/index.md`: public documentation map and setup order.
@@ -136,8 +136,8 @@ An Agent may orchestrate registered operations across several turns. It can
 inspect a thread, search approved replies, classify a message, create a draft,
 and request human approval.
 
-The Agent does not own message storage, routing, offer data, draft validation,
-or sending. Use a Cloudflare Workflow for durable approval and retry steps.
+The Agent does not own message storage, routing, approval state, or sending.
+Use a Cloudflare Workflow for durable approval and retry steps.
 The operation registry remains the contract.
 
 ## Email safety
@@ -148,7 +148,6 @@ The operation registry remains the contract.
 - Drafting and sending are separate operations.
 - Sending requires an approved draft unless a narrow, documented policy says
   otherwise.
-- Validate quoted prices and links against structured offer configuration.
 - Preserve `Message-ID`, `In-Reply-To`, and `References` for threading.
 - Detect auto-replies and prevent loops.
 - Record outbound attempts and idempotency keys before retrying.

@@ -2,7 +2,6 @@ import {
   MailroomError,
   normalizeMessageId,
   normalizeSubject,
-  validateDraftAgainstOffers,
 } from '@mailroom/core'
 import { addressParser } from 'postal-mime'
 import {
@@ -14,14 +13,8 @@ import {
   parseJson,
 } from '../database.js'
 import { emailAddresses } from '../email-addresses.js'
-import {
-  inputNumber,
-  inputString,
-  inputStrings,
-  optionalString,
-} from '../operation-input.js'
+import { inputNumber, inputString, optionalString } from '../operation-input.js'
 import { sendOutbound } from '../outbound.js'
-import { getOffersConfig } from '../prompts.js'
 import { indexMessage } from '../search.js'
 import type { OperationContext } from '../types.js'
 
@@ -45,7 +38,6 @@ function draftSummary(row: Row): Record<string, unknown> {
     recipient: row.recipient,
     subject: row.subject,
     source: row.source,
-    valid: parseJson<{ valid?: boolean }>(row.validation, {}).valid === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     sentAt: row.sent_at,
@@ -116,8 +108,6 @@ export async function getDraft(
     replyTo: draft.reply_to,
     text: draft.text_body,
     html: draft.html_body,
-    offerIds: parseJson(draft.offer_ids, []),
-    validation: parseJson(draft.validation, {}),
     prompt: draft.prompt_id
       ? { id: draft.prompt_id, hash: draft.prompt_hash }
       : null,
@@ -154,13 +144,7 @@ export async function createDraft(
       `Message ${sourceMessageId} was not found.`,
     )
   }
-  const offerIds = inputStrings(input, 'offerIds')
   const text = inputString(input, 'text')
-  const validation = validateDraftAgainstOffers(
-    text,
-    getOffersConfig(),
-    offerIds,
-  )
   const sender =
     (sourceMessage.from_address as string | null) ??
     `${sourceMessage.local_part}@${sourceMessage.domain}`
@@ -177,9 +161,9 @@ export async function createDraft(
     context.env.DB.prepare(
       `INSERT INTO drafts (
         id, message_id, thread_id, status, recipient, sender, reply_to,
-        subject, text_body, html_body, offer_ids, validation, source,
+        subject, text_body, html_body, validation, source,
         prompt_id, prompt_hash, model, created_at, updated_at
-      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       id,
       sourceMessageId,
@@ -190,8 +174,7 @@ export async function createDraft(
       subject,
       text,
       optionalString(input, 'html') ?? null,
-      JSON.stringify(offerIds),
-      JSON.stringify(validation),
+      '{}',
       inputString(input, 'source'),
       optionalString(input, 'promptId') ?? null,
       optionalString(input, 'promptHash') ?? null,
@@ -203,13 +186,7 @@ export async function createDraft(
       `INSERT INTO draft_events
         (id, draft_id, action, actor, note, created_at)
       VALUES (?, ?, 'created', ?, ?, ?)`,
-    ).bind(
-      newId('evt'),
-      id,
-      inputString(input, 'source'),
-      validation.valid ? null : 'Deterministic validation failed.',
-      now,
-    ),
+    ).bind(newId('evt'), id, inputString(input, 'source'), null, now),
   ])
   return {
     id,
@@ -217,7 +194,6 @@ export async function createDraft(
     recipient,
     sender,
     subject,
-    validation,
   }
 }
 
@@ -227,7 +203,7 @@ export async function approveDraft(
 ): Promise<unknown> {
   const id = inputString(input, 'id')
   const current = await context.env.DB.prepare(
-    'SELECT status, validation FROM drafts WHERE id = ?',
+    'SELECT status FROM drafts WHERE id = ?',
   )
     .bind(id)
     .first<Row>()
@@ -238,12 +214,6 @@ export async function approveDraft(
     throw new MailroomError(
       'CONFLICT',
       `Only a pending draft can be approved; this draft is ${current.status}.`,
-    )
-  }
-  if (!parseJson<{ valid?: boolean }>(current.validation, {}).valid) {
-    throw new MailroomError(
-      'CONFLICT',
-      'The draft has unresolved deterministic validation errors.',
     )
   }
   const now = nowIso()

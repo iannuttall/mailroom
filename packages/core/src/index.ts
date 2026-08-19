@@ -2,10 +2,6 @@ export { MailroomClient, type MailroomClientOptions } from './api-client.js'
 export {
   type AutomationsConfig,
   automationsConfigSchema,
-  type DraftValidationIssue,
-  type OffersConfig,
-  offersConfigSchema,
-  validateDraftAgainstOffers,
 } from './automation.js'
 export {
   importCanonicalRequest,

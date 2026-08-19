@@ -396,7 +396,7 @@ const definitions: readonly OperationDefinition[] = [
     description: 'Prepare a reply without sending it',
     useWhen: ['A human or agent has enough thread context to propose a reply'],
     avoidWhen: ['The source message or recipient is unknown'],
-    outcome: 'Stores a pending draft and runs deterministic offer validation.',
+    outcome: 'Stores a pending draft for review and later approval.',
     related: ['messages.thread', 'drafts.get', 'drafts.approve'],
     safety: {
       readOnly: false,
@@ -409,7 +409,6 @@ const definitions: readonly OperationDefinition[] = [
       subject: z.string().trim().min(1).max(998).optional(),
       text: z.string().trim().min(1).max(250_000),
       html: z.string().trim().max(500_000).optional(),
-      offerIds: z.array(idSchema).max(20).default([]),
       source: z.enum(['manual', 'automation', 'agent']).default('manual'),
       promptId: idSchema.optional(),
       promptHash: z
