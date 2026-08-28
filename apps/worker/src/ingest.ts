@@ -10,7 +10,12 @@ import PostalMime, {
   type Attachment,
   type Email as ParsedEmail,
 } from 'postal-mime'
-import { batchOrThrow, newId, nowIso } from './database.js'
+import {
+  batchOrThrow,
+  markPriorInboundMessagesRead,
+  newId,
+  nowIso,
+} from './database.js'
 import { emailAddresses, firstEmailAddress } from './email-addresses.js'
 import { requireInboundRoute } from './route-store.js'
 import { indexMessage } from './search.js'
@@ -263,6 +268,9 @@ export async function ingestEmail(
   const status = envelope.direction === 'inbound' ? 'unread' : 'read'
 
   const statements: D1PreparedStatement[] = []
+  if (envelope.direction === 'outbound' && existingThreadId) {
+    statements.push(markPriorInboundMessagesRead(env.DB, threadId, at))
+  }
   if (!existingThreadId) {
     statements.push(
       env.DB.prepare(

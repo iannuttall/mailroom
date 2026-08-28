@@ -26,6 +26,20 @@ export function requireResult<T>(value: T | null, message: string): T {
   return value
 }
 
+export function markPriorInboundMessagesRead(
+  db: D1Database,
+  threadId: string,
+  outboundReceivedAt: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE messages SET status = 'read'
+      WHERE thread_id = ? AND direction = 'inbound' AND status = 'unread'
+        AND received_at <= ?`,
+    )
+    .bind(threadId, outboundReceivedAt)
+}
+
 export function cursorFrom(value: unknown): { at: string; id: string } | null {
   if (typeof value !== 'string') return null
   try {
