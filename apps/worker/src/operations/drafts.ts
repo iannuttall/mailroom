@@ -8,6 +8,7 @@ import {
   batchOrThrow,
   cursorFor,
   cursorFrom,
+  markPriorInboundMessagesRead,
   newId,
   nowIso,
   parseJson,
@@ -347,6 +348,11 @@ export async function sendDraft(
     const messageId = newId('msg')
     const rfcMessageId = normalizeMessageId(sent.messageId)
     await batchOrThrow(context.env.DB, [
+      markPriorInboundMessagesRead(
+        context.env.DB,
+        String(draft.thread_id),
+        sentAt,
+      ),
       context.env.DB.prepare(
         `INSERT INTO messages (
           id, thread_id, inbox_id, direction, status, rfc_message_id,
