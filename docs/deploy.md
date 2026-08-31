@@ -148,6 +148,17 @@ pnpm --filter @mailroom/worker exec wrangler secret put INGRESS_SECRET \
 `INGRESS_SECRET` is required even if the first deployment has no extra
 account.
 
+Use a separate relay secret for each extra Cloudflare account. Store the map
+on the central Worker without changing the shared fallback secret:
+
+```sh
+pnpm --filter @mailroom/worker exec wrangler secret put \
+  INGRESS_SECRETS_BY_DOMAIN --config wrangler.local.jsonc
+```
+
+Enter one JSON object that maps each email domain to its relay secret. Put the
+matching secret in that domain's ingress Worker as `INGRESS_SECRET`.
+
 Optional Gmail and Telegram secrets are added after the central Worker passes
 its health check:
 

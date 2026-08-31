@@ -5,6 +5,7 @@ import {
   failIngressEvent,
   startIngressEvent,
 } from './ingress-events.js'
+import { relaySecretForAddress } from './relay-secrets.js'
 import type { WaitUntilContext } from './types.js'
 
 function requiredHeader(request: Request, name: string): string {
@@ -50,7 +51,11 @@ export async function receiveRelayEmail(
   const signature = requiredHeader(request, 'x-mailroom-signature')
   if (
     actualHash !== signed.bodySha256 ||
-    !(await verifyIngressRequest(env.INGRESS_SECRET, signed, signature))
+    !(await verifyIngressRequest(
+      relaySecretForAddress(env, to),
+      signed,
+      signature,
+    ))
   ) {
     throw new MailroomError('FORBIDDEN', 'The relay signature is invalid.')
   }

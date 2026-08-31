@@ -75,6 +75,7 @@ before sending attachments.
 | `GMAIL_SYNC_SECRET` | Only for Gmail Sent sync | One user-owned Apps Script | Signs imported Gmail Sent MIME |
 | `MAILROOM_FORWARD_TO` | Only for forwarding | Nobody | Fallback verified Email Routing destination |
 | `MAILROOM_FORWARD_TO_BY_DOMAIN` | Only for per-domain forwarding | Nobody | JSON map from recipient domains to verified Email Routing destinations |
+| `INGRESS_SECRETS_BY_DOMAIN` | Only for relays that use separate secrets | Nobody | JSON map from email domains to relay secrets; domains not listed use `INGRESS_SECRET` |
 | `TELEGRAM_BOT_TOKEN` | Only for Telegram | Telegram | Sends accepted-message notifications |
 | `TELEGRAM_CHAT_ID` | Only for Telegram | Telegram | Selects the notification chat |
 | `TELEGRAM_NOTIFY_MAILBOXES` | Only for Telegram | Nobody | JSON array of exact mailbox addresses that may trigger notifications |

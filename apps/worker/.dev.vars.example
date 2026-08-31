@@ -1,5 +1,6 @@
 MAILROOM_API_TOKEN=replace-with-a-long-random-token
 INGRESS_SECRET=replace-with-a-different-long-random-secret
+INGRESS_SECRETS_BY_DOMAIN=
 GMAIL_SYNC_SECRET=
 MAILROOM_FORWARD_TO=
 MAILROOM_FORWARD_TO_BY_DOMAIN=

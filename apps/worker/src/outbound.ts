@@ -1,4 +1,5 @@
 import { sha256Hex, signRelayRequest } from '@mailroom/core'
+import { relaySecretForAddress } from './relay-secrets.js'
 
 export type OutboundMessage = {
   from: string
@@ -43,7 +44,10 @@ async function sendThroughRelay(
     path: url.pathname,
     bodySha256: await sha256Hex(body),
   }
-  const signature = await signRelayRequest(env.INGRESS_SECRET, signed)
+  const signature = await signRelayRequest(
+    relaySecretForAddress(env, message.from),
+    signed,
+  )
   const response = await fetch(url, {
     method: 'POST',
     headers: {
