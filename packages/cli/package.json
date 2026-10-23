@@ -27,7 +27,7 @@
     "citty": "^0.2.2"
   },
   "devDependencies": {
-    "tsdown": "^0.22.14",
+    "tsdown": "^0.23.1",
     "vitest": "^4.1.0"
   }
 }
