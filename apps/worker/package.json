@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@mailroom/core": "workspace:*",
-    "hono": "^4.12.32",
+    "hono": "^4.13.13",
     "postal-mime": "^2.7.5",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
