@@ -15,13 +15,13 @@
   },
   "dependencies": {
     "@mailroom/core": "workspace:*",
-    "hono": "^4.12.32",
+    "hono": "^4.13.13",
     "postal-mime": "^2.7.5",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.18.8",
+    "@cloudflare/vitest-pool-workers": "^0.23.0",
     "@cloudflare/workers-types": "^5.20260801.1",
     "vitest": "^4.1.0",
     "wrangler": "^4.118.0"

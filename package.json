@@ -86,7 +86,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.4",
     "@types/node": "^22.20.1",
-    "tsdown": "^0.22.14",
+    "tsdown": "^0.23.1",
     "turbo": "^2.10.7",
     "typescript": "^6.0.3"
   }
